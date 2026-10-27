@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "POC-WebView",
+    "slug": "POC-WebView",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0a0a",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pocwebview.conta"
+    },
+    "android": {
+      "package": "com.pocwebview.conta",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-dev-client",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita que o app acesse suas fotos para testar o bridge nativo.",
+          "cameraPermission": "Permita que o app use a camera para testar o bridge nativo.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permita que o app use sua localizacao para testar o bridge nativo."
+        }
+      ]
+    ]
+  }
+}
