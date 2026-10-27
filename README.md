@@ -76,6 +76,32 @@ npm start
 
 `npm run build:web` executa o build do Vite e regenera `src/webview/bundledHtml.ts`.
 
+### Builds na nuvem com EAS
+
+Os perfis de build ficam no `eas.json` da raiz. Antes do primeiro build, autentique e vincule o projeto:
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest init
+```
+
+| Perfil | O que entrega | Quando usar |
+| --- | --- | --- |
+| `development` | APK com dev client para instalar no aparelho e conectar no `npm start`. | Iterar no dispositivo com o Metro. |
+| `preview` | APK de distribuição interna, já com o bundle offline embutido. | Mostrar para outras pessoas sem servidor. |
+| `production` | Build de loja (AAB no Android), com `submit` configurado. | Submeter para as lojas. |
+
+```bash
+npx eas-cli@latest build --profile development --platform android
+npx eas-cli@latest build --profile preview --platform android
+npx eas-cli@latest build --profile production --platform all
+npx eas-cli@latest submit --profile production
+```
+
+- O build na nuvem usa o HTML embutido em `src/webview/bundledHtml.ts`. Rode `npm run build:web` depois de alterar o web app para o bundle não ficar defasado.
+- `EXPO_PUBLIC_WEBVIEW_URL` é só para o desenvolvimento local. Na nuvem, sem a variável definida o app abre o bundle offline; para apontar um build para um servidor específico, defina a URL como variável de ambiente do EAS.
+- Os perfis `development` e `preview` geram APK para instalação direta. iOS com distribuição interna exige aparelhos registrados na conta Apple.
+
 ### Scripts
 
 | Comando | Onde | O que faz |
@@ -144,6 +170,7 @@ O host Expo (`App.tsx`) mantém o WebView, valida as mensagens, executa a API na
 .
 ├─ App.tsx                    # Host Expo, WebView, permissões e bridge
 ├─ index.ts                   # Entrada do Expo
+├─ eas.json                   # Perfis de build do EAS
 ├─ shared/bridge.ts           # Protocolo v1, tipos e lista de ações
 ├─ src/webview/bundledHtml.ts # HTML único gerado para uso offline
 ├─ scripts/embed-web.mjs      # Gera o bundle embutido
