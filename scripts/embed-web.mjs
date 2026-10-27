@@ -6,7 +6,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const inputPath = path.join(root, "web", "dist", "index.html")
 const outputPath = path.join(root, "src", "webview", "bundledHtml.ts")
 
-const html = await readFile(inputPath, "utf8")
+// Normaliza quebras de linha: builds no Windows podem emitir \r ou \r\r\n,
+// o que geraria diff espurio em um artifact versionado.
+const html = (await readFile(inputPath, "utf8")).replace(/\r/g, "")
 
 if (!html.includes("<html")) {
   throw new Error(`Build inesperado em ${inputPath}: HTML nao encontrado.`)
