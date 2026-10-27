@@ -8,9 +8,12 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0a0a0a",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pocwebview.conta"
     },
     "android": {
+      "package": "com.pocwebview.conta",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0a0a0a",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -23,6 +26,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       [
         "expo-image-picker",
         {
