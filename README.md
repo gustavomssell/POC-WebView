@@ -2,10 +2,34 @@
 
 Prova de conceito de um app de finanças rodando dentro de um **WebView do Expo** e conversando com o host nativo por um protocolo JSON versionado. A interface foi construída como uma caderneta digital: saldo, meta, categorias, lançamentos e um feed de atividade que mostra cada chamada nativa.
 
+![Expo SDK 58](https://img.shields.io/badge/Expo-SDK%2058-000020?logo=expo&logoColor=white)
+![Node 22.13+](https://img.shields.io/badge/Node-22.13%2B-339933?logo=node.js&logoColor=white)
+![Licença MIT](https://img.shields.io/badge/license-MIT-blue)
+
 <p align="center">
   <img src="docs/screenshots/conta-mobile.png" width="260" alt="Tela inicial do Conta em um celular">
   <img src="docs/screenshots/conta-desktop.png" width="640" alt="Tela inicial do Conta no desktop">
 </p>
+
+## Índice
+
+- [Funcionalidades](#funcionalidades)
+- [Começando](#começando)
+  - [Requisitos](#requisitos)
+  - [Instalação](#instalação)
+  - [Prévia somente web](#prévia-somente-web)
+  - [App nativo com o Vite em desenvolvimento](#app-nativo-com-o-vite-em-desenvolvimento)
+  - [App nativo com o bundle offline](#app-nativo-com-o-bundle-offline)
+  - [Builds na nuvem com EAS](#builds-na-nuvem-com-eas)
+  - [Scripts](#scripts)
+- [Arquitetura](#arquitetura)
+- [Como funciona](#como-funciona)
+- [Protocolo v1](#protocolo-v1)
+- [Estrutura do projeto](#estrutura-do-projeto)
+- [Verificações](#verificações)
+- [Gitflow](#gitflow)
+- [Limitações conhecidas](#limitações-conhecidas)
+- [Licença](#licença)
 
 ## Funcionalidades
 
