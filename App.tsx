@@ -9,8 +9,6 @@ import {
 } from "react"
 import {
   ActivityIndicator,
-  Alert,
-  Dimensions,
   Modal,
   Platform,
   Pressable,
@@ -25,24 +23,18 @@ import {
   SafeAreaView,
 } from "react-native-safe-area-context"
 import { WebView, type WebViewMessageEvent, type WebViewProps } from "react-native-webview"
-import * as Clipboard from "expo-clipboard"
-import Constants from "expo-constants"
-import * as Device from "expo-device"
-import * as Haptics from "expo-haptics"
-import * as ImagePicker from "expo-image-picker"
-import * as Linking from "expo-linking"
-import * as Location from "expo-location"
+import { createActionRunner } from "./src/bridge/actions"
+import {
+  describeInvalid,
+  extractOrigin,
+  formatDetail,
+  parseHostMessage,
+} from "./src/bridge/host-message"
 import {
   BRIDGE_PROTOCOL_VERSION,
-  isNativeAction,
-  type BridgeRequest,
   type BridgeResponse,
-  type DeviceInfo,
-  type HapticStyle,
-  type LocationResult,
   type NativeEvent,
   type NativeToWeb,
-  type PhotoResult,
 } from "./shared/bridge"
 import { bundledHtml } from "./src/webview/bundledHtml"
 
@@ -70,34 +62,9 @@ const mono = Platform.select({
   default: "monospace",
 })
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-function extractOrigin(url: string) {
-  return /^[A-Za-z][A-Za-z0-9+.-]*:(\/\/)?[^/]*/.exec(url)?.[0] ?? null
-}
-
-function formatDetail(value: unknown) {
-  if (value === undefined) {
-    return ""
-  }
-
-  try {
-    return JSON.stringify(value, (_key, item) =>
-      typeof item === "string" && item.length > 180
-        ? `${item.slice(0, 177)}...`
-        : item,
-    )
-  } catch {
-    return String(value)
-  }
-}
-
 function BridgeScreen() {
   const webViewRef = useRef<WebViewHandle>(null)
   const logScrollRef = useRef<ComponentRef<typeof ScrollView>>(null)
-  const counterRef = useRef(0)
 
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [counter, setCounter] = useState(0)
@@ -175,113 +142,10 @@ function BridgeScreen() {
     [sendToWeb],
   )
 
-  const runAction = useCallback(
-    async (request: BridgeRequest): Promise<unknown> => {
-      switch (request.action) {
-        case "device.info": {
-          const { width, height } = Dimensions.get("window")
-          const info: DeviceInfo = {
-            platform: Platform.OS,
-            osVersion: Device.osVersion ?? String(Platform.Version),
-            model: Device.modelName ?? Device.deviceName ?? "desconhecido",
-            appVersion: Constants.expoConfig?.version ?? "1.0.0",
-            screenWidth: Math.round(width),
-            screenHeight: Math.round(height),
-          }
-
-          return info
-        }
-
-        case "camera.takePhoto": {
-          const permission = await ImagePicker.requestCameraPermissionsAsync()
-
-          if (!permission.granted) {
-            throw new Error("Permissao de camera negada")
-          }
-
-          const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ["images"],
-            quality: request.payload.quality ?? 0.4,
-            base64: true,
-          })
-
-          if (result.canceled) {
-            return null
-          }
-
-          const asset = result.assets[0]
-
-          if (!asset) {
-            throw new Error("Camera nao retornou uma imagem")
-          }
-
-          const photo: PhotoResult = {
-            uri: asset.uri,
-            dataUrl: asset.base64
-              ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
-              : null,
-            width: asset.width,
-            height: asset.height,
-            fileName: asset.fileName ?? null,
-            mimeType: asset.mimeType ?? null,
-            bytes: asset.fileSize ?? null,
-          }
-
-          return photo
-        }
-
-        case "location.current": {
-          const permission = await Location.requestForegroundPermissionsAsync()
-
-          if (permission.status !== "granted") {
-            throw new Error("Permissao de localizacao negada")
-          }
-
-          const position = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          })
-
-          const location: LocationResult = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            altitude: position.coords.altitude,
-            timestamp: position.timestamp,
-            mocked: position.mocked ?? false,
-          }
-
-          return location
-        }
-
-        case "haptics.impact": {
-          const style: HapticStyle = request.payload.style
-          const feedback: Record<HapticStyle, Haptics.ImpactFeedbackStyle> = {
-            light: Haptics.ImpactFeedbackStyle.Light,
-            medium: Haptics.ImpactFeedbackStyle.Medium,
-            heavy: Haptics.ImpactFeedbackStyle.Heavy,
-          }
-
-          await Haptics.impactAsync(feedback[style])
-          return { style }
-        }
-
-        case "clipboard.write": {
-          await Clipboard.setStringAsync(request.payload.text)
-          return { length: request.payload.text.length }
-        }
-
-        case "clipboard.read":
-          return { text: await Clipboard.getStringAsync() }
-
-        case "native.echo":
-          return {
-            message: request.payload.message,
-            echoedAt: new Date().toISOString(),
-          }
-
-        case "native.counter": {
-          counterRef.current += request.payload.delta
-          const value = counterRef.current
+  const runAction = useMemo(
+    () =>
+      createActionRunner({
+        onCounterChanged: (value) => {
           setCounter(value)
 
           const event: NativeEvent = {
@@ -292,62 +156,23 @@ function BridgeScreen() {
           }
 
           sendToWeb(event)
-          return { value }
-        }
-
-        case "ui.alert": {
-          Alert.alert(request.payload.title, request.payload.message)
-          return { shown: true }
-        }
-
-        case "link.open": {
-          const canOpen = await Linking.canOpenURL(request.payload.url)
-
-          if (!canOpen) {
-            throw new Error(`URL nao suportada: ${request.payload.url}`)
-          }
-
-          await Linking.openURL(request.payload.url)
-          return { opened: true }
-        }
-
-        default: {
-          const exhaustive: never = request
-          throw new Error(`Acao desconhecida: ${String(exhaustive)}`)
-        }
-      }
-    },
+        },
+      }),
     [sendToWeb],
   )
 
   const handleMessage = useCallback(
     async (event: WebViewMessageEvent) => {
       const raw = event.nativeEvent.data
-      let parsed: unknown
+      const parsed = parseHostMessage(raw)
 
-      try {
-        parsed = JSON.parse(raw)
-      } catch {
-        addLog("in", "invalid json", raw.slice(0, 200))
-        return
-      }
-
-      if (!isRecord(parsed)) {
-        addLog("in", "invalid message", raw.slice(0, 200))
-        return
-      }
-
-      if (parsed.v !== BRIDGE_PROTOCOL_VERSION) {
-        addLog("in", "protocol mismatch", String(parsed.v))
+      if (!parsed.ok) {
+        const { label, detail } = describeInvalid(parsed, raw)
+        addLog("in", label, detail)
         return
       }
 
       if (parsed.kind === "event") {
-        if (typeof parsed.event !== "string") {
-          addLog("in", "invalid event", raw.slice(0, 200))
-          return
-        }
-
         addLog("in", `event · ${parsed.event}`, formatDetail(parsed.payload))
 
         if (parsed.event === "web.ready") {
@@ -357,17 +182,7 @@ function BridgeScreen() {
         return
       }
 
-      if (parsed.kind !== "request") {
-        addLog("in", "invalid message kind", String(parsed.kind))
-        return
-      }
-
-      if (typeof parsed.id !== "string" || !isNativeAction(parsed.action)) {
-        addLog("in", "invalid request", raw.slice(0, 200))
-        return
-      }
-
-      const message = parsed as BridgeRequest
+      const message = parsed.request
 
       setWebReady(true)
       addLog("in", `request · ${message.action}`, formatDetail(message.payload))

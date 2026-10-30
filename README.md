@@ -138,6 +138,8 @@ npx eas-cli@latest submit --profile production
 | `npm run embed:web` | raiz | Apenas regenera `src/webview/bundledHtml.ts`. |
 | `npm run typecheck` | raiz | Typecheck do host Expo. |
 | `npm run lint` | raiz | Lint do host Expo. |
+| `npm test` | raiz | Roda a suíte Jest do host. |
+| `npm run test:watch` | raiz | Suíte Jest em modo watch. |
 | `npm --prefix web run dev` | raiz | Equivalente a `npm run web`. |
 | `npm --prefix web run build` | raiz | Build do web app em `web/dist/`. |
 | `npm --prefix web run preview` | raiz | Serve o build web localmente. |
@@ -195,8 +197,11 @@ O host Expo (`App.tsx`) mantém o WebView, valida as mensagens, executa a API na
 ├─ App.tsx                    # Host Expo, WebView, permissões e bridge
 ├─ index.ts                   # Entrada do Expo
 ├─ eas.json                   # Perfis de build do EAS
+├─ __tests__/                 # Suíte Jest do host (protocolo e ações)
 ├─ shared/bridge.ts           # Protocolo v1, tipos e lista de ações
-├─ src/webview/bundledHtml.ts # HTML único gerado para uso offline
+├─ src/
+│  ├─ bridge/                 # Parsing de mensagens e ações nativas
+│  └─ webview/bundledHtml.ts  # HTML único gerado para uso offline
 ├─ scripts/embed-web.mjs      # Gera o bundle embutido
 ├─ web/
 │  ├─ src/
@@ -214,15 +219,18 @@ O host Expo (`App.tsx`) mantém o WebView, valida as mensagens, executa a API na
 
 ## Verificações
 
-Não há suíte de testes automatizados. A validação cobre tipos, lint, build e QA manual das ações no WebView.
+A suíte automatizada cobre o protocolo (`shared/bridge.ts`), o parsing das mensagens recebidas do WebView e as dez ações nativas, com os módulos Expo mockados. Câmera, GPS, clipboard e demais APIs seguem exigindo QA manual em dispositivo ou emulador, com as permissões concedidas.
 
 ```bash
 npm run typecheck
 npm run lint
+npm test
 npm --prefix web run lint
 npm --prefix web run build
 npx expo-doctor
 ```
+
+Os testes ficam em `__tests__/` e usam Jest com o preset `jest-expo`.
 
 ## Gitflow
 
